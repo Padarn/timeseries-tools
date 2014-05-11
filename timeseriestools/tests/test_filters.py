@@ -11,7 +11,8 @@ the functionality.
 import numpy as np
 import pandas as pd
 import timeseriestools.filters as filters
-from numpy.testing import (assert_, assert_raises, assert_almost_equal,
+from nose.tools import raises
+from numpy.testing import (assert_, assert_almost_equal,
                            assert_equal, assert_array_equal, assert_allclose)
 from math import isnan
 from datetime import datetime
@@ -34,7 +35,7 @@ class TestRemovalFilters(object):
 		ts = self.ts
 		ts['1-1-2011 05']=np.nan
 		ts = filters.remove_incomplete_periods(ts,period='1h')
-		assert(not datetime(2011,1,1,5) in ts.resample('d'))
+		assert(not datetime(2011,1,1,5) in ts.index)
 
 	def test_remove_nothing(self):
 		index = self.ts.index
@@ -47,4 +48,36 @@ class TestRemovalFilters(object):
 		ts[ts.resample('d').index]=np.nan
 		ts = filters.remove_incomplete_periods(ts,'d')
 		assert(len(ts)==0)
+
+	@raises(TypeError)
+	def test_no_feq_exception(self):
+		ts = self.ts
+		ts[0]=np.nan
+		ts = filters.remove_incomplete_periods(ts, period='1h')
+		ts = filters.remove_incomplete_periods(ts, period='d')
+
+	def test_remove_hour_then_day_beginning(self):
+		ts = self.ts
+		ts[0]=np.nan
+		ts = filters.remove_incomplete_periods(ts, period='1h')
+		ts = filters.remove_incomplete_periods(ts, period='d', freq='1h')
+		for i in range(24):
+			assert(not datetime(2011,1,1,i) in ts.index)
+
+
+	def test_remove_hour_then_day_middle(self):
+		ts = self.ts
+		ts[40]=np.nan
+		ts = filters.remove_incomplete_periods(ts, period='1h')
+		ts = filters.remove_incomplete_periods(ts, period='d', freq='1h')
+		for i in range(24):
+			assert(not datetime(2011,1,2,i) in ts.index)
+
+	def test_remove_hour_then_day_end(self):
+		ts = self.ts
+		ts[-1]=np.nan
+		ts = filters.remove_incomplete_periods(ts, period='1h')
+		ts = filters.remove_incomplete_periods(ts, period='d', freq='1h')
+		assert(not datetime(2011,1,3) in ts.resample('d'))
+
 
