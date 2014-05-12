@@ -1,0 +1,5 @@
+The functions in this module are untests, and will remain so.
+Instead effort will be put towards porting needed functionality
+to statsmodels.
+
+USE AT YOUR OWN RISK
