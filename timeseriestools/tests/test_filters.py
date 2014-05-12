@@ -80,4 +80,52 @@ class TestRemovalFilters(object):
 		ts = filters.remove_incomplete_periods(ts, period='d', freq='1h')
 		assert(not datetime(2011,1,3) in ts.resample('d'))
 
+class TestContinousSegmentFunctions(object):
+
+	def __init__(self):
+		np.random.seed(1234)
+		rng = pd.date_range('1/1/2011', periods=500, freq='1h')
+		self.ts = pd.Series(np.random.randn(len(rng)), index=rng)
+
+	def test_get_continuous_groups_multiple_missing(self):
+		ts = self.ts
+		ts = ts[0:100].append(ts[200:500])
+		ts[300]=np.nan
+		indices = filters.group_continuous_segments_indices(ts, freq='1h')
+		assert_equal(indices,[[0, 99], [200, 399], [401, 499]])
+
+	def test_two_tied_return_one(self):
+		ts = self.ts
+		ts = ts[0:100].append(ts[200:300])
+		ts_seg = filters.longest_continuous_segment(ts, freq='1h')
+		assert_array_equal(ts_seg.values, ts[0:100].values)
+
+	def test_two_tied_return_all(self):
+		ts = self.ts
+		ts = ts[0:100].append(ts[200:300])
+		ts_segs = filters.longest_continuous_segment(ts, freq='1h',return_all=True)
+		assert_array_equal(ts_segs[0].values, ts[0:100].values)
+		assert_array_equal(ts_segs[1].values, ts[200:300].values)
+
+	def test_get_longest_start_nan(self):
+		ts = self.ts
+		ts[0:100] = np.nan
+		ts_seg = filters.longest_continuous_segment(ts, freq='1h')
+		assert_array_equal(ts_seg.values, ts[100:].values)
+
+	def test_get_longest_end_nan(self):
+		ts = self.ts
+		ts[400:] = np.nan
+		ts_seg = filters.longest_continuous_segment(ts, freq='1h')
+		assert_array_equal(ts_seg.values, ts[:400].values)
+
+
+	def test_get_longest_multiple_middle_missing(self):
+		ts = self.ts
+		ts[300:400] = np.nan
+		ts = filters.remove_incomplete_periods(ts, period='1h')
+		ts[250] = np.nan
+		ts[200:202] = np.nan
+		ts_seg = filters.longest_continuous_segment(ts, freq='1h')
+		assert_array_equal(ts_seg.values, ts[:200].values)
 
