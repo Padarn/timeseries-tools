@@ -13,7 +13,7 @@ before_install:
   - conda update --yes --quiet conda
 
 install:
-  - conda create --yes --quiet -n tools-test nose numpy pandas
+  - conda create --yes --quiet -n tools-test nose numpy pandas statsmodels
   - source activate tools-test
   - if [ ${COVERAGE} = true ]; then pip install coverage coveralls; fi
   - python setup.py install
