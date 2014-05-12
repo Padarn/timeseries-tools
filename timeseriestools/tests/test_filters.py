@@ -103,7 +103,7 @@ class TestContinousSegmentFunctions(object):
 	def test_two_tied_return_all(self):
 		ts = self.ts
 		ts = ts[0:100].append(ts[200:300])
-		ts_segs = filters.longest_continuous_segment(ts, freq='1h',return_all=True)
+		ts_segs = filters.longest_continuous_segment(ts, freq='1h', return_all=True)
 		assert_array_equal(ts_segs[0].values, ts[0:100].values)
 		assert_array_equal(ts_segs[1].values, ts[200:300].values)
 
@@ -119,7 +119,6 @@ class TestContinousSegmentFunctions(object):
 		ts_seg = filters.longest_continuous_segment(ts, freq='1h')
 		assert_array_equal(ts_seg.values, ts[:400].values)
 
-
 	def test_get_longest_multiple_middle_missing(self):
 		ts = self.ts
 		ts[300:400] = np.nan
@@ -128,4 +127,24 @@ class TestContinousSegmentFunctions(object):
 		ts[200:202] = np.nan
 		ts_seg = filters.longest_continuous_segment(ts, freq='1h')
 		assert_array_equal(ts_seg.values, ts[:200].values)
+
+	def test_get_indices_three_series_different_missing(self):
+		df = pd.DataFrame(index = self.ts.index)
+		df['ser1'] = df['ser2'] = df['ser3'] = self.ts
+		df['ser1'][100] = df['ser1'][450] = np.nan
+		df['ser2'][400] = np.nan
+		df['ser3'][50:200] = np.nan
+		df = filters.group_continuous_segments_indices_multivariate(df, freq = '1h')
+		assert_array_equal(df,np.array([[0, 49], [200, 399], [401, 449], [451, 499]]))
+
+	def test_get_longest_three_series_different_missing(self):
+		df = pd.DataFrame(index = self.ts.index)
+		df['ser1'] = df['ser2'] = df['ser3'] = self.ts
+		df_cp = df.copy()
+		df['ser1'][100] = df['ser1'][450] = np.nan
+		df['ser2'][400] = np.nan
+		df['ser3'][50:200] = np.nan
+		df = filters.longest_continous_segment_multivariate(df, freq = '1h')
+		assert_equal(df.values,df_cp[200:400].values)
+
 

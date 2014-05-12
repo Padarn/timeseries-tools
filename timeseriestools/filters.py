@@ -53,7 +53,6 @@ def remove_incomplete_periods(ts, period='d', freq = None):
     groups = ts.groupby(validperiod).groups
     return ts[groups.get(True,[])]
 
-
 def group_continuous_segments_indices(ts, freq = None):
     """
     Take a pandas time series which may and nan's and or gaps in the record
@@ -79,7 +78,6 @@ def group_continuous_segments_indices(ts, freq = None):
     ts = ts.reindex(index)
 
     # consume time seires inserting into a list to return
-    segments = []
     ts_notnan = 1-ts.apply(isnan)
     ts_notnan[ts_notnan==0]=-1
     diff = ts_notnan[1:].values-ts_notnan[0:-1].values
@@ -97,9 +95,9 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
     and returns a time series representing the longest avaliable continous 
     subseries.
 
-    Parameter 
-    ---------
-    ts - time series to remove from
+    Parameters 
+    ----------
+    ts - time series to get segment from
     freq - input timeseries frequency expected. If None, try and read
            from ts
     return_all - in the case of a tie for the longest, return_all being
@@ -124,6 +122,66 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
     else:
         indices_longest = [indices[x] for x in longest]
         return [ts[x[0]:x[1]+1] for x in indices_longest]
+
+
+
+def group_continuous_segments_indices_multivariate(df, freq = None):
+    """
+    Take a pandas data frame which is indexed by a time series index and
+    returns the indices ofcontinous segments over which all of the variables
+    of the data frame are avaliable and valid.
+
+    Parameters
+    ----------
+    df - dataframe to get segment from
+    freq - input timeseries frequency expected. If None, try and read
+           from ts
+    """
+
+    if freq == None:
+        if df.index.freq == None:
+            raise TypeError("Input time series has no frequency. Supply one")
+        else:
+            freq = df.index.freqstr
+
+    start = df.index[0]
+    end = df.index[-1]
+    index = pd.date_range(start=start,end=end,freq=freq)
+    df = df.reindex(index)
+    ts = df.apply(sum,axis=1)
+
+    return group_continuous_segments_indices(ts, freq)
+
+def longest_continous_segment_multivariate(df, freq = None, return_all = False):
+    """
+    Take a pandas data frame which is indexed by a time series index and
+    returns the longest continous segment over which all of the variables of 
+    the data frame are avaliable and valid.
+
+    Parameters
+    ----------
+    df - dataframe to get segment from
+    freq - input timeseries frequency expected. If None, try and read
+           from ts
+    return_all - in the case of a tie for the longest, return_all being
+                true means all are returned. Otherwise the first is.
+    """
+
+    if freq == None:
+        if df.index.freq == None:
+            raise TypeError("Input time series has no frequency. Supply one")
+        else:
+            freq = df.index.freqstr
+
+    start = df.index[0]
+    end = df.index[-1]
+    index = pd.date_range(start=start,end=end,freq=freq)
+    df = df.reindex(index)
+    ts = df.apply(sum,axis=1)
+
+    ts_longest = longest_continuous_segment(ts, freq, return_all)
+    return df.reindex(ts_longest.index)
+
 
 
 
