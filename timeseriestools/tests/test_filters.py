@@ -92,7 +92,7 @@ class TestContinousSegmentFunctions(object):
 		ts = ts[0:100].append(ts[200:500])
 		ts[300]=np.nan
 		indices = filters.group_continuous_segments_indices(ts, freq='1h')
-		assert_equal(indices,[[0, 99], [200, 399], [401, 499]])
+		assert_equal(indices,[[0, 99], [100, 299], [301, 399]])
 
 	def test_two_tied_return_one(self):
 		ts = self.ts
@@ -104,8 +104,8 @@ class TestContinousSegmentFunctions(object):
 		ts = self.ts
 		ts = ts[0:100].append(ts[200:300])
 		ts_segs = filters.longest_continuous_segment(ts, freq='1h', return_all=True)
-		assert_array_equal(ts_segs[0].values, ts[0:100].values)
-		assert_array_equal(ts_segs[1].values, ts[200:300].values)
+		assert_array_equal(ts_segs[0].values, self.ts[0:100].values)
+		assert_array_equal(ts_segs[1].values, self.ts[200:300].values)
 
 	def test_get_longest_start_nan(self):
 		ts = self.ts
