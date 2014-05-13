@@ -80,7 +80,7 @@ class TestRemovalFilters(object):
 		ts = filters.remove_incomplete_periods(ts, period='d', freq='1h')
 		assert(not datetime(2011,1,3) in ts.resample('d'))
 
-class TestContinousSegmentFunctions(object):
+class TestContinuousSegmentFunctions(object):
 
 	def __init__(self):
 		np.random.seed(1234)
@@ -134,7 +134,7 @@ class TestContinousSegmentFunctions(object):
 		df['ser1'][100] = df['ser1'][450] = np.nan
 		df['ser2'][400] = np.nan
 		df['ser3'][50:200] = np.nan
-		df = filters.group_continuous_segments_indices_multivariate(df, freq = '1h')
+		df = filters.group_continuous_segments_indices(df, freq = '1h')
 		assert_array_equal(df,np.array([[0, 49], [200, 399], [401, 449], [451, 499]]))
 
 	def test_get_longest_three_series_different_missing(self):
@@ -144,7 +144,7 @@ class TestContinousSegmentFunctions(object):
 		df['ser1'][100] = df['ser1'][450] = np.nan
 		df['ser2'][400] = np.nan
 		df['ser3'][50:200] = np.nan
-		df = filters.longest_continous_segment_multivariate(df, freq = '1h')
+		df = filters.longest_continuous_segment(df, freq = '1h')
 		assert_equal(df.values,df_cp[200:400].values)
 
 

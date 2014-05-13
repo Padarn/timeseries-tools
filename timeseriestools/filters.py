@@ -41,11 +41,20 @@ def _incomplete_to_nan(data, period = None, freq = None):
 
     if period == None:
         period = freq
+    
+    # Convert freqstr to offset
+    freq = pd.tseries.frequencies.to_offset(freq)
+    period = pd.tseries.frequencies.to_offset(period)
+
+    # Pandas only allows frequencies with mult = 1 to be converted to a period,
+    # so find mult and use as a multipier below
+    n = period.n
+    period.n = 1
 
     # Build new index
     start = data.index[0].to_period(period)
-    end = data.index[-1].to_period(period)
-    index = pd.date_range(start=start.to_timestamp(),end=(end+1).to_timestamp(),freq=freq)
+    end = data.index[-1].to_period(period)+n
+    index = pd.date_range(start=start.to_timestamp(),end=end.to_timestamp(),freq=freq)
     index = index[:-1]
     data = data.reindex(index)
 
@@ -93,12 +102,13 @@ def remove_incomplete_periods(ts, period='d', freq = None):
 
 def group_continuous_segments_indices(ts, freq = None):
     """
-    Take a pandas time series which may and nan's and or gaps in the record
-    and return a list of indices corresponding to the continous subseries.
+    Take a pandas time series or data frame which may and nan's and or gaps
+    in the record and return a list of indices corresponding to the continous
+     subseries.
 
     Parameter 
     ---------
-    ts - time series to remove from
+    ts - time series or data frame to remove from
     freq - input timeseries frequency expected. If None, try and read
            from ts
 
@@ -107,6 +117,10 @@ def group_continuous_segments_indices(ts, freq = None):
     pairs of indicies for the input series that deliniate the period where
     the series is not nan.
     """
+
+    # if input is a datafarme, go to dataframe method
+    if isinstance(ts, pd.DataFrame):
+        return _group_continuous_segments_indices_multivariate(ts, freq)
 
     # convert missing to nan
     ts_wnan = _incomplete_to_nan(ts, freq = freq)
@@ -133,13 +147,13 @@ def group_continuous_segments_indices(ts, freq = None):
 
 def longest_continuous_segment(ts, freq = None, return_all=False):
     """
-    Take a pandas time series which may have nan's and or gaps in the record
-    and returns a time series representing the longest avaliable continous 
-    subseries.
+    Take a pandas time series or data frame which may have nan's and or 
+    gaps in the record and returns a time series representing the 
+    longest avaliable continous subseries.
 
     Parameters 
     ----------
-    ts - time series to get segment from
+    ts - time series or data frame to get segment from
     freq - input timeseries frequency expected. If None, try and read
            from ts
     return_all - in the case of a tie for the longest, return_all being
@@ -156,6 +170,10 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
     This function just uses the above 'group_continuous_segments' and takes
     the longest.
     """
+
+    # if input is a datafarme, go to dataframe method
+    if isinstance(ts, pd.DataFrame):
+        return _longest_continuous_segment_multivariate(ts, freq, return_all)
 
     # Get continous block indices
     indices = group_continuous_segments_indices(ts, freq = freq)
@@ -178,7 +196,7 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
 
 
 
-def group_continuous_segments_indices_multivariate(df, freq = None):
+def _group_continuous_segments_indices_multivariate(df, freq = None):
     """
     Take a pandas data frame which is indexed by a time series index and
     returns the indices ofcontinous segments over which all of the variables
@@ -195,6 +213,10 @@ def group_continuous_segments_indices_multivariate(df, freq = None):
     returns the indicies of the segments of continous non nan values for 
     all columns. That is, segments are segments where all series are non
     nan.
+
+    Notes
+    -----
+    called by the non-multivate version where needed
     """
 
     # turn non continous segments into nans
@@ -206,7 +228,7 @@ def group_continuous_segments_indices_multivariate(df, freq = None):
     # now works exactly like time series method
     return group_continuous_segments_indices(ts, freq)
 
-def longest_continous_segment_multivariate(df, freq = None, return_all = False):
+def _longest_continuous_segment_multivariate(df, freq = None, return_all = False):
     """
     Take a pandas data frame which is indexed by a time series index and
     returns the longest continous segment over which all of the variables of 
@@ -224,6 +246,10 @@ def longest_continous_segment_multivariate(df, freq = None, return_all = False):
     ------
     the dataframe slice of the longest continous period with all series 
     avaliable.
+
+    Notes
+    -----
+    called by the non-multivate version where needed
     """
 
     # turn non continous segments into nans
