@@ -133,7 +133,6 @@ def remove_trig_trend(ts, period, order=1, return_fit = False):
     else:
         return ts - trig_fit
 
-
 def _change_mean(ts, new_mean):
     """
     Performs change_mean on one time series. See doc string of change_mean
@@ -167,7 +166,6 @@ def change_mean(tsframe, new_mean = None):
             return _change_mean(tsframe, 0)
         else:
             return _change_mean(tsframe, new_mean)
-
 
 def _change_sd(ts, new_sd):
     """
@@ -203,7 +201,6 @@ def change_sd(tsframe, new_sd = None):
             return _change_sd(tsframe, 1)
         else:
             return _change_sd(tsframe, new_sd)
-
 
 def _standardize(ts, old_values = None, return_old = False):
     """
@@ -247,13 +244,18 @@ def standardize(tsframe, old_values = None, return_old = False):
         if old_values is None:
             old_values = {}
             df = tsframe.copy()
-            for key in param_list.keys():
+            for key in df.keys():
                 df[key], old_values[key] =  _standardize(df[key], 
                                               return_old = True)
             if return_old:
                 return df, old_values
             else:
                 return df
+        else:
+            df = tsframe.copy()
+            for key in df.keys():
+                df[key] = _standardize(df[key],old_values=old_values[key])
+            return df
     else:
         if old_values is None:
             if return_old:
@@ -262,4 +264,44 @@ def standardize(tsframe, old_values = None, return_old = False):
                 return _standardize(tsframe)
         else:
             return _standardize(tsframe, old_values = old_values)
+
+def standardize_hours(tsframe, old_values = None, return_old = False):
+    """
+    Standardizes a time series or all columns of a dataframe for each hour.
+    The point of this is to remove an obvious diurnal cycle in the data.
+
+    Parameters
+    ----------
+    tsframe -    dataframe or time seires to standardize
+    old_values - old values of mean and standard deiviation in a dict if is to be
+                 reversed.
+    return_old - if true, old mean and standard deviations are returned.
+
+    Output
+    ------
+    the new standardized (or reversed) series/dataframe, and also the old mean 
+    and standard deviation as a second return argument is return_old=True, the 
+    old_values are formatted as a dictionary for each reversal using this function.
+    """
+    df = tsframe.copy()
+    old_dict = {}
+    g = df.groupby(lambda x:x.hour)
+    if old_values is None:
+        # Do the standardization
+        for key in g.groups.keys():
+            index = g.get_group(key).index
+            df.ix[index], old = standardize(df.ix[index], return_old = True)
+            old_dict[key] = old
+        if return_old == True:
+            return df, old_dict
+        else:
+            return df
+
+    else:
+        # Do the reverse standardization
+        for key in g.groups.keys():
+            index = g.get_group(key).index
+            df.ix[index] = standardize(df.ix[index], old_values = old_values[key])
+        return df
+
 

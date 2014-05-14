@@ -143,7 +143,6 @@ def group_continuous_segments_indices(ts, freq = None):
     # return pairs
     return [list(x) for x in zip(ts_ups,ts_downs)]
 
-
 def longest_continuous_segment(ts, freq = None, return_all=False):
     """
     Take a pandas time series or data frame which may have nan's and or 
@@ -192,8 +191,6 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
     else:
         indices_longest = [indices[x] for x in longest]
         return [ts[x[0]:x[1]+1] for x in indices_longest]
-
-
 
 def _group_continuous_segments_indices_multivariate(df, freq = None):
     """
@@ -317,4 +314,3 @@ def groups_to_inds(groups):
     ind_full = np.array([range(x[0],x[1]+1) for x in groups])
     ind_full = [item for sublist in ind_full for item in sublist]
     return ind_full
-

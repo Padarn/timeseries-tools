@@ -7,5 +7,5 @@ setup(name='timeseriestools',
       author='Padarn Wilson',
       author_email='padarn@gmail.com',
       license='MIT',
-      packages=['timeseriestools'],
+      packages=['timeseriestools','rtools'],
       zip_safe=False)

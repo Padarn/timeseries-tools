@@ -113,3 +113,14 @@ class TestStandardizationScaling(object):
         assert_almost_equal(ts.mean(),self.ts.mean())
         assert_almost_equal(ts.std(),self.ts.std())
 
+    def test_hours_standardize(self):
+        df = self.df
+        df, old = trend_removal.standardize_hours(df,return_old=True)
+        gstd = df.groupby(lambda x:x.hour).get_group(5)['ts1']
+        g = self.df.groupby(lambda x:x.hour).get_group(5)['ts1']
+        assert_almost_equal(gstd.mean(),0)
+        assert_almost_equal(gstd.std(),1)
+        df = trend_removal.standardize_hours(df,old_values=old)
+        gstd = df.groupby(lambda x:x.hour).get_group(5)['ts1']
+        assert_almost_equal(gstd.mean(),g.mean())
+        assert_almost_equal(gstd.std(),g.std())
