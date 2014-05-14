@@ -147,4 +147,34 @@ class TestContinuousSegmentFunctions(object):
 		df = filters.longest_continuous_segment(df, freq = '1h')
 		assert_equal(df.values,df_cp[200:400].values)
 
+class TestNanSegmentFixes(object):
+
+	def __init__(self):
+		np.random.seed(1234)
+		rng = pd.date_range('1/1/2011', periods=500, freq='1h')
+		self.ts = pd.Series(np.random.randn(len(rng)), index=rng)
+
+	def test_find_nan_segments_missing_and_nan(self):
+		ts = self.ts
+		ts = ts[100:200].append(ts[250:500])
+		ts[50:60] = np.nan
+		ts[300:302] = np.nan
+		groups_all, _ = filters.find_nan_segments(ts, freq = '1h') 
+		groups_20, _ = filters.find_nan_segments(ts, freq = '1h', nan_length = 20) 
+		groups_2, _ = filters.find_nan_segments(ts, freq = '1h', nan_length = 2)
+		groups_1, tsnan = filters.find_nan_segments(ts, freq = '1h', nan_length = 1)
+		assert(groups_all == [[50, 59],[100,149],[350,351]])
+		assert(groups_20 == [[50, 59],[350,351]])
+		assert(groups_2 == [[350,351]])
+		assert(groups_1 == [])
+		ts_custom = self.ts[100:]
+		ts_custom[50:60] = np.nan
+		ts_custom[100:150] = np.nan
+		ts_custom[350:352] = np.nan
+		assert_array_equal(ts_custom.values, tsnan.values)
+
+	def test_groups_to_inds(self):
+		groups = filters.groups_to_inds([[1,10],[12,14]])
+		assert_array_equal(groups, [1,2,3,4,5,6,7,8,9,10,12,13,14])
+
 

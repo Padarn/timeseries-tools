@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 from math import isnan
 
-
 def _find_time_index(i, index1, index2):
     time = index1.index[i]
     newi = np.where(index2.index==time)
@@ -262,6 +261,60 @@ def _longest_continuous_segment_multivariate(df, freq = None, return_all = False
     ts_longest = longest_continuous_segment(ts, freq, return_all)
     return df.reindex(ts_longest.index)
 
+def find_nan_segments(ts, freq = None, nan_length = None):
+    """
+    Take a pandas timeseires object and return a list of segments which
+    correspond to gaps in the time seires (nans or missing values) of 
+    consecutive length nan_length. Frequency of time series is required
+    to identify the frquency to look for missing values
 
+    Parameters
+    ----------
+    ts         - time series from which to find nan segments
+    freq       - frequency used for filling in missing values, 
+                 if None taken from ts
+    nan_length - maximum length of nan segment, defaults to inf
 
+    Output
+    ------
+    groups = groups of indicies corresponding to the segments
+    ts = time series wth nans insteado of missing values
+    """
+
+    # turn any missing sections into nans
+    ts = _incomplete_to_nan(ts, freq = freq)
+    ts_nans = ts.copy()
+
+    # reverse
+    ts = 0+ts.apply(isnan)
+    ts[ts==0] = np.NaN
+
+    # compute nan indices
+    nan_inds = group_continuous_segments_indices(ts, freq = freq)
+    
+    # with no nan length, return all 
+    if nan_length == None:
+        return nan_inds, ts_nans
+
+    # otherwise, find segments with lengths short enough
+    nan_inds = [x for x in nan_inds if (x[1]-x[0]<=nan_length-1)]
+    return nan_inds, ts_nans
+
+def groups_to_inds(groups):
+    """
+    Takes groups of incidies that give the limits of segments and
+    returns all the corresponding indices
+
+    Parameters
+    ----------
+    groups = list of [lower,upper] indicies for groups
+
+    Output
+    ------
+    full list of indices
+    """
+
+    ind_full = np.array([range(x[0],x[1]+1) for x in groups])
+    ind_full = [item for sublist in ind_full for item in sublist]
+    return ind_full
 
