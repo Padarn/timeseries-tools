@@ -25,7 +25,7 @@ def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
 	rcode = rcode[:-1]
 
 	# Add on extras 
-	if extra is not None
+	if extras is not None:
 		rcode = rcode + ',' + extras
 
 	rcode = rcode + ')'
