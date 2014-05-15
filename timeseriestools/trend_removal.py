@@ -133,6 +133,77 @@ def remove_trig_trend(ts, period, order=1, return_fit = False):
     else:
         return ts - trig_fit
 
+def remove_dual_trig_trend(ts, periods, mult=False, orders=None, return_fit = False):
+    """
+    Remove a combintion of two trignomentric trends from a time series at
+    different periods.
+
+    Parameters
+    ----------
+    ts         - time series for which to remove the trig trend.
+    periods     - the periods (list) of the longest trig cycle.
+    order      - the orders (list) of the trig fit.
+    return_fit - bool, decides if fit is returned as second argument.
+                 If true, returns the trend and coefficients:
+                       new_ts, [linear_fit, fit]
+                 fit is an array fit = [b1,b0], y=b0+b1*x
+
+    Output
+    -----
+    returns the trend removed series, and if return_coef is true
+    returns as a second argument the fitted series and coefficient
+    of the fit.
+
+    NOTES
+    -----
+    WARNING: CURRENTLY UNTESTED AS NO GOOD TEST CASE IDENTIFIED
+    """
+    tsin = ts
+    ts = ts.dropna()
+
+    if orders is None:
+        orders = [1]*len(periods)
+
+    times = np.array([_toYearFraction(x) for x in ts.index])
+    a, b = times[0], times[-1]
+    times = (times - a)/(b-a)
+
+    nperiods  = len(periods)
+
+    Xs = []
+
+    for i in range(nperiods):
+        onecycle = _toYearFraction(pd.date_range(start=ts.index[0], periods=2, freq=periods[i])[1])
+        onecycle = 2*np.pi/((onecycle-a)/(b-a))
+
+        X = np.ones(len(ts))
+        for i in range(orders[i]):
+            j = i+1
+            X = np.column_stack((X, np.sin(onecycle*times*j), np.cos(onecycle*times*j)))
+
+        Xs.append(X)
+
+    sizes = [x.shape[1] for x in Xs]
+
+    # TODO: Find a better way to do this
+    import operator
+    sizesm = reduce(operator.mul, sizes, 1)
+
+    # TODO: ASSUMINE TWO PERIODS FOR NOW
+    Xall = np.array([[x*y for x in Xs[0].T] for y in Xs[1].T]).reshape(sizesm,len(ts))
+    Xall = Xall.T
+
+    mod = sm.OLS(ts.values, Xall)
+    res = mod.fit()
+    trig_fit = pd.Series(data = res.fittedvalues, index = ts.index)
+    trig_fit.reindex(tsin.index)
+
+    if return_fit:
+        return tsin - trig_fit, [trig_fit, res.params]
+    else:
+        return tsin - trig_fit
+
+
 def _change_mean(ts, new_mean):
     """
     Performs change_mean on one time series. See doc string of change_mean
