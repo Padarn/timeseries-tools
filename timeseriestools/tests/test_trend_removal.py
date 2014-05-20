@@ -42,11 +42,18 @@ class TestRemovalFilters(object):
         assert_array_almost_equal(linear_fit,self.linear,1)
         assert_array_almost_equal(np.array([20,-10]),fit,1)
 
+    def test_dummy_trig_frame(self):
+        dummydf = trend_removal.dummy_trig_trend(self.ts.index, '12M', order = 2)
+        assert_equal([u'period_12M_o_1_sin', u'period_12M_o_1_cos', u'period_12M_o_2_sin', u'period_12M_o_2_cos'],
+                      dummydf.keys())
+        dummydf = trend_removal.dummy_trig_trend(self.ts.index, '1h', order = 1)
+        assert_almost_equal(np.ones(len(dummydf)), dummydf.period_1h_o_1_cos,2)
+        
+
     def test_remove_trig_without_fit_order1(self):
         ts_plus_trig = self.ts + self.trig
         ts = trend_removal.remove_trig_trend(ts_plus_trig, period='10d' ,return_fit = False)
         assert_array_almost_equal(ts,self.ts,1)
-
 
     def test_remove_linear_without_fit_order2_overspecified(self):
         ts_plus_trig = self.ts + self.trig
@@ -68,7 +75,7 @@ class TestRemovalFilters(object):
 
     def test_remove_trend_linear_coef(self):
         ts_plus_linear = self.ts+ self.linear
-        ts, coef = trend_removal.remove_ts_trend(ts_plus_linear, self.linear, return_coef = True)
+        ts, [fit, coef] = trend_removal.remove_ts_trend(ts_plus_linear, self.linear, return_coef = True)
         assert_array_almost_equal(ts,self.ts,1)
         assert_almost_equal(coef,1,1)
 

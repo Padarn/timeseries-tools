@@ -49,25 +49,33 @@ def remove_ts_trend(ts, trend_ts, return_coef = False):
     returns as a second argument the coefficient
     of the fit.
     """
+    ts_full_index = ts.index
+    ts = ts.dropna()
     mod = sm.OLS(ts.values, trend_ts.values)
     res = mod.fit()
+    fit = pd.Series(index=ts.index,data=res.fittedvalues)
+    fit = fit.reindex(ts_full_index)
+    ts = ts.reindex(ts_full_index)
     if return_coef:
-        return ts - res.fittedvalues, res.params
+        return ts - fit, [fit, res.params]
     else:
-        return ts - res.fittedvalues
+        return ts - fit
 
-def remove_linear_trend(ts, return_fit = False):
+def remove_linear_trend(ts, return_fit = False, leave_const = False):
     """
     Remove a linear trend from a Pandas time series object. The linear
     trend is fit using a least squares fit to the data.
 
     Parameters
     ----------
-    ts         - time series for which to remove the linear trend.
-    return_fit - bool, decides if fit is returned as second argument.
+    ts         : Time series for which to remove the linear trend.
+    return_fit : Bool, decides if fit is returned as second argument.
                  If true, returns the trend and coefficients:
                        new_ts, [linear_fit, fit]
                  fit is an array fit = [b1,b0], y=b0+b1*x
+    leave_const : If true, the constant part of the trend is not 
+                  removed.
+
 
     Output
     -----
@@ -75,6 +83,8 @@ def remove_linear_trend(ts, return_fit = False):
     returns as a second argument the fitted series and coefficient
     of the fit.
     """
+    tsfull = ts
+    ts = ts.dropna()
     
     # Scale times
     times = np.array([_toYearFraction(x) for x in ts.index])
@@ -84,11 +94,59 @@ def remove_linear_trend(ts, return_fit = False):
     fit = np.polyfit(np.array(times),ts.values,1)
     linear_fit = pd.Series(data = fit[0]*np.array(times)+fit[1],
                            index = ts.index)
-    ts= ts-linear_fit
+    linear_fit = linear_fit.reindex(tsfull.index)
+
+    if leave_const:
+        linear_fit = linear_fit - fit[0]
+
+    tsfull = tsfull-linear_fit
+
     if return_fit:
-        return ts, [linear_fit, fit]
+        return tsfull, [linear_fit, fit]
     else:
-        return ts
+        return tsfull
+
+def dummy_trig_trend(tsindex, period, order = 1):
+    """
+    Produce the covariate series required to regress against a trignometric
+    trend of the given order.
+
+    Parameters
+    ----------
+    tsindex : A DateTimeIndex object which represents the time frame over
+              which to fit the trend.
+    period : The period of the trignometric cycle (string).
+    order : The number of terms in the trignometric trend. Total number of
+            returned covariants is double this to account for both cos and
+            sin elements.
+
+    Output
+    ------
+    The dataframe X of covariates for the tsindex trend. Does not include the
+    constant column. Dummy variables are given names 'period_X_o_Y_sin/cos'.
+
+    Notes
+    -----
+    The covariates are scaled for the particular period selected, thus 
+    multiple trends cannot be constructed for regression without scaling.
+
+    """
+    dummydf = pd.DataFrame(index = tsindex)
+
+    times = np.array([_toYearFraction(x) for x in tsindex])
+    a, b = times[0], times[-1]
+    times = (times - a)/(b-a)
+
+    onecycle = _toYearFraction(pd.date_range(start=tsindex[0], periods=2, freq=period)[1])
+    onecycle = 2*np.pi/((onecycle-a)/(b-a))
+
+    for i in range(order):
+        j = i+1
+        keybase = 'period_'+period+'_o_'+str(j)+'_'
+        dummydf[keybase+'sin'] = np.sin(onecycle*times*j)
+        dummydf[keybase+'cos'] = np.cos(onecycle*times*j)
+    
+    return dummydf
 
 def remove_trig_trend(ts, period, order=1, return_fit = False):
     """
@@ -112,26 +170,21 @@ def remove_trig_trend(ts, period, order=1, return_fit = False):
     of the fit.
     """
 
-    times = np.array([_toYearFraction(x) for x in ts.index])
-    a, b = times[0], times[-1]
-    times = (times - a)/(b-a)
+    tsfull = ts.copy()
+    ts = ts.dropna()
 
-    onecycle = _toYearFraction(pd.date_range(start=ts.index[0], periods=2, freq=period)[1])
-    onecycle = 2*np.pi/((onecycle-a)/(b-a))
-
-    X = np.ones(len(ts))
-    for i in range(order):
-        j = i+1
-        X = np.column_stack((X, np.sin(onecycle*times*j), np.cos(onecycle*times*j)))
+    X = dummy_trig_trend(ts.index, period, order).values
+    X = np.column_stack((np.ones(len(ts)), X ))
 
     mod = sm.OLS(ts.values, X)
     res = mod.fit()
     trig_fit = pd.Series(data = res.fittedvalues, index = ts.index)
+    trig_frig = trig_fit.reindex(tsfull.index)
 
     if return_fit:
-        return ts - trig_fit, [trig_fit, res.params]
+        return tsfull - trig_fit, [trig_fit, res.params]
     else:
-        return ts - trig_fit
+        return tsfull - trig_fit
 
 def remove_dual_trig_trend(ts, periods, mult=False, orders=None, return_fit = False):
     """
