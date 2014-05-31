@@ -12,7 +12,7 @@ def rAssign(obj,name):
 		obj = npr.numpy2ri(obj)
 		rr.assign(name,obj)
 	elif isinstance(obj,pd.DataFrame):
-		obj = com.convert_to_r_dataframe(dframe)
+		obj = com.convert_to_r_dataframe(obj)
 		rr.assign(name, obj)
 	else:
 		rr.assign(name, obj)
