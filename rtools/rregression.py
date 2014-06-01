@@ -10,6 +10,7 @@ def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
     rtools.rCode('library(nlme)')
     rtools.rCode('library(splines)')
 
+
     rtools.rAssign(df[yname].values,yname)
     for xn in xlin_names:
         rtools.rAssign(df[xn].values,xn)
@@ -25,6 +26,9 @@ def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
     rcode = rcode[:-1]
 
     # Add on extras 
+    varmean = pd.Series(index=df.index,data = np.ones(len(df.index)))
+    varmean = varmean*df[yname].mean()
+    rtools.rAssign(varmean.values, 'varmean')
     if extras is not None:
         rcode = rcode + ',' + extras
 
@@ -35,31 +39,32 @@ def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
 
     return mod
 
-def gammodel(yname, xlin_names, xtlin_names, xtspline_names, df):
+def gammodel(yname, xlin, xspline, df, extras = None):
 
     # Push the data with the given names from df to 
     df = df.dropna()
 
     rtools.rCode('library(mgcv)')
     rtools.rCode('library(splines)')
-
-    rtools.rAssign(df[yname].values,yname)
-    for xn in xlin_names + xtlin_names + xtspline_names:
-        rtools.rAssign(df[xn].values,xn)
-    rtools.rAssign(df['hour'].values,'hour')
+    rtools.rAssign(df, 'dataf')
 
     # Put together rCode
-    rcode = 'gam(' + yname + ' ~ '
-    for xn in xlin_names:
-        rcode = rcode + xn + '+'
-    for xn in xtlin_names:
-        rcode = rcode + xn+'*s(hour)' + '+'
-    for xn in xtspline_names:
-        rcode = rcode + 's(' + xn + ',hour)' + '+'
-
+    rcode = 'gamm(' + yname + ' ~ '
+    for xn in xlin:
+        rcode = rcode +  xn + '+'
+    for xn in xspline:
+        rcode = rcode + 'te(hour,' + xn + ')+'
     rcode = rcode[:-1]
-    rcode = rcode +')'
 
+    # Add on extras 
+    varmean = pd.Series(index=df.index,data = np.ones(len(df.index)))
+    varmean = varmean*df[yname].mean()
+    rtools.rAssign(varmean.values, 'varmean')
+    if extras is not None:
+        rcode = rcode + ',' + extras
+
+    rcode = rcode +',data=dataf)'
+    print rcode
     mod = rtools.rCode(rcode, ret = True)
 
     return mod

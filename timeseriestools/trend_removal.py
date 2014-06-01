@@ -428,4 +428,15 @@ def standardize_hours(tsframe, old_values = None, return_old = False):
             df.ix[index] = standardize(df.ix[index], old_values = old_values[key])
         return df
 
+def unstandardize_hours(ts, old, varname):
+    """
+    Unstandardizes the time series by using the variable scaling quantities given
+    by varname inside the dictionary 'old'
+    """
 
+    df = ts.copy()
+    g = df.groupby(lambda x:x.hour)
+    for key in g.groups.keys():
+        index = g.get_group(key).index
+        df.ix[index] = standardize(df.ix[index], old_values = old[key][varname])
+    return df

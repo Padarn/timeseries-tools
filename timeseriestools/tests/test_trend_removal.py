@@ -131,3 +131,7 @@ class TestStandardizationScaling(object):
         gstd = df.groupby(lambda x:x.hour).get_group(5)['ts1']
         assert_almost_equal(gstd.mean(),g.mean())
         assert_almost_equal(gstd.std(),g.std())
+
+    def test_zero_sigma_standardize(self):
+        ## TODO - add test that checks that zero series are just 
+        # left alone or handled somehow
