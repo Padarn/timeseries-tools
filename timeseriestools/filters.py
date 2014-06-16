@@ -143,7 +143,7 @@ def group_continuous_segments_indices(ts, freq = None):
     # return pairs
     return [list(x) for x in zip(ts_ups,ts_downs)]
 
-def longest_continuous_segment(ts, freq = None, return_all=False):
+def longest_continuous_segment(ts, freq = None, return_all=False, max_holes = 0):
     """
     Take a pandas time series or data frame which may have nan's and or 
     gaps in the record and returns a time series representing the 
@@ -156,6 +156,7 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
            from ts
     return_all - in the case of a tie for the longest, return_all being
                  true means all are returned. Otherwise the first is.
+    max_hole - specifies the maximum hole size in the returned segment
 
     Output
     ------
@@ -178,9 +179,28 @@ def longest_continuous_segment(ts, freq = None, return_all=False):
     
     # Find lengths of blocks and select the maximums
     lens = [x[1]-x[0] for x in indices]
+    
+    # remove and nan periods which are smaller than max_hole
+    if max_holes > 0:
+        pairs = zip(indices[:-1],indices[1:])
+        nanlengths = [y[0]-x[1] for (x,y) in pairs]
+        indices_holes = []
+        el = indices[0][0]
+        for i in range(len(nanlengths)):
+            if nanlengths[i] >= max_holes:
+                el = [[el, indices[i][1]]]
+                indices_holes = indices_holes + el
+                el = indices[i+1][0]
+        el = [[el, indices[-1][1]]]
+        indices_holes = indices_holes + el
+        indices = indices_holes
+        lens = [x[1]-x[0] for x in indices]
+
+    # Get Max length
     maxlens = np.max(lens)
     longest = np.where(lens==maxlens)[0]
     
+
     # Return the longest, or the first longest if tied.
     if(len(longest)==1):
         x = indices[longest]

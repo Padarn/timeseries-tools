@@ -2,7 +2,7 @@ import rtools as rtools
 import numpy as np
 import pandas as pd
 
-def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
+def glsmodel(yname, xlin_names, xspline_names, df, extras = None, push = None):
 
     # Push the data with the given names from df to 
     df = df.dropna()
@@ -10,12 +10,7 @@ def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
     rtools.rCode('library(nlme)')
     rtools.rCode('library(splines)')
 
-
-    rtools.rAssign(df[yname].values,yname)
-    for xn in xlin_names:
-        rtools.rAssign(df[xn].values,xn)
-    for xn in xspline_names:
-        rtools.rAssign(df[xn].values,xn)
+    rtools.rAssign(df, 'dataf')
 
     # Put together rCode
     rcode = 'gls('+yname+' ~ '
@@ -32,8 +27,7 @@ def glsmodel(yname, xlin_names, xspline_names, df, extras = None):
     if extras is not None:
         rcode = rcode + ',' + extras
 
-    rcode = rcode +')'
-    
+    rcode = rcode +',data=dataf)'
 
     mod = rtools.rCode(rcode, ret = True)
 

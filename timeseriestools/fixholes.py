@@ -53,7 +53,9 @@ def kalman_holes_R_seasonal(ts, sfreq= None, hole_inds = None):
     fixed = np.array(rCode("fit",ret=True))
 
     if hole_inds is None:
-        return pd.Series(index=ts.index,data=fixed)
+        inds = np.where(np.isnan(tsvals))[0]
+        tsvals[inds] = fixed[inds]
+        return pd.Series(index=ts.index,data=tsvals)
 
 def arima_holes_R_seasonal(ts, arima_order = None, seasonal_order = None,
                           sfreq= None, hole_inds = None):
